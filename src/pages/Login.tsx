@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Gift, AlertCircle } from 'lucide-react';
+import { Gift, AlertCircle, CheckCircle } from 'lucide-react';
 
 export default function Login() {
   const [isLogin, setIsLogin] = useState(true);
@@ -10,6 +10,7 @@ export default function Login() {
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
 
   const { signIn, signUp } = useAuth();
@@ -18,20 +19,38 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
     setLoading(true);
 
     try {
       if (isLogin) {
         const { error } = await signIn(email, password);
         if (error) throw error;
+
         navigate('/admin');
       } else {
-        const { error } = await signUp(email, password, fullName, phone);
+        const { error, needsEmailConfirmation } = await signUp(
+          email,
+          password,
+          fullName,
+          phone
+        );
+
+        if (needsEmailConfirmation) {
+          setSuccess(
+            'Account created successfully. Please check your email and confirm your account before logging in.'
+          );
+          return;
+        }
+
         if (error) throw error;
-        navigate('/');
+
+        setSuccess('Account created successfully. You can now log in.');
+        setIsLogin(true);
       }
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'An error occurred';
+      const errorMessage =
+        err instanceof Error ? err.message : 'Something went wrong';
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -39,7 +58,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-rose-600 via-pink-500 to-orange-400 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-rose-600 via-pink-500 to-orange-400 flex items-center justify-center py-12 px-4">
       <div className="max-w-md w-full">
         <div className="bg-white rounded-lg shadow-2xl p-8">
           <div className="text-center mb-8">
@@ -52,12 +71,19 @@ export default function Login() {
             </p>
           </div>
 
+          {/* ERROR MESSAGE */}
           {error && (
-            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex gap-3">
               <AlertCircle className="w-5 h-5 text-red-600 mt-0.5" />
-              <div className="flex-1">
-                <p className="text-sm text-red-800">{error}</p>
-              </div>
+              <p className="text-sm text-red-800">{error}</p>
+            </div>
+          )}
+
+          {/* SUCCESS MESSAGE */}
+          {success && (
+            <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg flex gap-3">
+              <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
+              <p className="text-sm text-green-800">{success}</p>
             </div>
           )}
 
@@ -65,73 +91,69 @@ export default function Login() {
             {!isLogin && (
               <>
                 <div>
-                  <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium mb-2">
                     Full Name
                   </label>
                   <input
-                    id="fullName"
                     type="text"
                     required
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-600 focus:border-transparent outline-none transition-all"
-                    placeholder="Enter your full name"
+                    className="w-full px-4 py-2 border rounded-lg"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
-                    Phone Number (Optional)
+                  <label className="block text-sm font-medium mb-2">
+                    Phone (optional)
                   </label>
                   <input
-                    id="phone"
                     type="tel"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-600 focus:border-transparent outline-none transition-all"
-                    placeholder="Enter your phone number"
+                    className="w-full px-4 py-2 border rounded-lg"
                   />
                 </div>
               </>
             )}
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium mb-2">
                 Email Address
               </label>
               <input
-                id="email"
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-600 focus:border-transparent outline-none transition-all"
-                placeholder="Enter your email"
+                className="w-full px-4 py-2 border rounded-lg"
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium mb-2">
                 Password
               </label>
               <input
-                id="password"
                 type="password"
                 required
+                minLength={6}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rose-600 focus:border-transparent outline-none transition-all"
-                placeholder="Enter your password"
-                minLength={6}
+                className="w-full px-4 py-2 border rounded-lg"
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-rose-600 text-white py-3 rounded-lg font-semibold hover:bg-rose-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-rose-600 text-white py-3 rounded-lg font-semibold disabled:opacity-50"
             >
-              {loading ? 'Please wait...' : isLogin ? 'Sign In' : 'Sign Up'}
+              {loading
+                ? 'Please wait...'
+                : isLogin
+                ? 'Sign In'
+                : 'Sign Up'}
             </button>
           </form>
 
@@ -140,15 +162,18 @@ export default function Login() {
               onClick={() => {
                 setIsLogin(!isLogin);
                 setError('');
+                setSuccess('');
               }}
-              className="text-rose-600 hover:text-rose-700 font-medium text-sm"
+              className="text-rose-600 font-medium text-sm"
             >
-              {isLogin ? "Don't have an account? Sign Up" : 'Already have an account? Sign In'}
+              {isLogin
+                ? "Don't have an account? Sign Up"
+                : 'Already have an account? Sign In'}
             </button>
           </div>
 
-          <div className="mt-6 pt-6 border-t border-gray-200 text-center">
-            <Link to="/" className="text-gray-600 hover:text-rose-600 text-sm font-medium">
+          <div className="mt-6 pt-6 border-t text-center">
+            <Link to="/" className="text-gray-600 text-sm">
               Back to Home
             </Link>
           </div>
